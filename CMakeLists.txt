@@ -1,0 +1,78 @@
+cmake_minimum_required(VERSION 3.16)
+project(katoann LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release)
+endif()
+
+option(KATOANN_NATIVE "Compile for the CPU of the build machine (-march=native)" ON)
+option(KATOANN_TCMALLOC "Link the executables with tcmalloc when it is installed" ON)
+option(KATOANN_PYTHON "Build the Python module (needs pybind11)" OFF)
+
+find_package(OpenMP REQUIRED)
+# k-means uses CBLAS; OpenBLAS keeps a single OpenMP runtime (libgomp).
+if(NOT DEFINED BLA_VENDOR)
+  set(BLA_VENDOR OpenBLAS)
+endif()
+find_package(BLAS REQUIRED)
+find_path(CBLAS_INCLUDE_DIR cblas.h
+          PATHS /usr/include/x86_64-linux-gnu /usr/include/openblas /usr/local/include)
+
+include(CheckCXXCompilerFlag)
+set(KATOANN_FLAGS -funroll-loops)
+if(KATOANN_NATIVE)
+  list(APPEND KATOANN_FLAGS -march=native -mtune=native)
+endif()
+check_cxx_compiler_flag("-mamx-tile -mamx-int8 -mamx-bf16" HAVE_AMX_FLAGS)
+if(HAVE_AMX_FLAGS)
+  list(APPEND KATOANN_FLAGS -mamx-tile -mamx-int8 -mamx-bf16)
+endif()
+
+set(KATOANN_SOURCES src/index.cpp src/kernels.cpp src/kmeans.cpp)
+add_library(katoann STATIC ${KATOANN_SOURCES})
+target_include_directories(katoann PUBLIC include PRIVATE src ${CBLAS_INCLUDE_DIR})
+target_compile_options(katoann PRIVATE ${KATOANN_FLAGS} -Wall -Wextra)
+target_link_libraries(katoann PUBLIC OpenMP::OpenMP_CXX ${BLAS_LIBRARIES})
+
+find_library(TCMALLOC_LIB NAMES tcmalloc tcmalloc_minimal)
+
+add_executable(katoann_cli tools/katoann.cpp)
+set_target_properties(katoann_cli PROPERTIES OUTPUT_NAME katoann)
+target_compile_options(katoann_cli PRIVATE ${KATOANN_FLAGS} -Wall -Wextra)
+target_link_libraries(katoann_cli PRIVATE katoann)
+
+enable_testing()
+foreach(t test_kernels test_index)
+  add_executable(${t} tests/${t}.cpp)
+  target_compile_options(${t} PRIVATE ${KATOANN_FLAGS})
+  target_link_libraries(${t} PRIVATE katoann)
+  add_test(NAME ${t} COMMAND ${t})
+endforeach()
+
+if(KATOANN_TCMALLOC AND TCMALLOC_LIB)
+  foreach(t katoann_cli test_kernels test_index)
+    target_link_libraries(${t} PRIVATE ${TCMALLOC_LIB})
+  endforeach()
+endif()
+
+if(SKBUILD)
+  set(KATOANN_PYTHON ON)
+endif()
+if(KATOANN_PYTHON)
+  find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
+  find_package(pybind11 CONFIG REQUIRED)
+  # The module is a shared object, so it gets its own position-independent copy
+  # of the library; the executables keep the faster non-PIC build.
+  add_library(katoann_pic STATIC ${KATOANN_SOURCES})
+  set_target_properties(katoann_pic PROPERTIES POSITION_INDEPENDENT_CODE ON)
+  target_include_directories(katoann_pic PUBLIC include PRIVATE src ${CBLAS_INCLUDE_DIR})
+  target_compile_options(katoann_pic PRIVATE ${KATOANN_FLAGS} -fno-semantic-interposition)
+  target_link_libraries(katoann_pic PUBLIC OpenMP::OpenMP_CXX ${BLAS_LIBRARIES})
+  pybind11_add_module(katoann_py python/katoann_module.cpp)
+  set_target_properties(katoann_py PROPERTIES OUTPUT_NAME katoann)
+  target_compile_options(katoann_py PRIVATE ${KATOANN_FLAGS})
+  target_link_libraries(katoann_py PRIVATE katoann_pic)
+  install(TARGETS katoann_py LIBRARY DESTINATION .)
+endif()

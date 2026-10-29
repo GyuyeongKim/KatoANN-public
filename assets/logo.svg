@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="220" height="220" viewBox="0 0 220 220">
+  <title>KatoANN</title>
+  <rect x="10" y="10" width="200" height="200" rx="36" fill="#3B3F8F"/>
+  <g transform="translate(46 46)">
+    <rect x="0" y="0" width="28" height="28" rx="5" fill="#E9E6FA"/>
+    <rect x="34" y="0" width="28" height="28" rx="5" fill="#E9E6FA"/>
+    <rect x="68" y="0" width="28" height="28" rx="5" fill="#A99BD9"/>
+    <rect x="102" y="0" width="28" height="28" rx="5" fill="#A99BD9"/>
+    <rect x="0" y="34" width="28" height="28" rx="5" fill="#E9E6FA"/>
+    <rect x="34" y="34" width="28" height="28" rx="5" fill="#E9E6FA"/>
+    <rect x="68" y="34" width="28" height="28" rx="5" fill="#A99BD9"/>
+    <rect x="102" y="34" width="28" height="28" rx="5" fill="#A99BD9"/>
+    <rect x="0" y="68" width="28" height="28" rx="5" fill="#E9E6FA"/>
+    <rect x="34" y="68" width="28" height="28" rx="5" fill="#E9E6FA"/>
+    <rect x="68" y="68" width="28" height="28" rx="5" fill="#A99BD9"/>
+    <rect x="102" y="68" width="28" height="28" rx="5" fill="#A99BD9"/>
+    <rect x="0" y="102" width="28" height="28" rx="5" fill="#E9E6FA"/>
+    <rect x="34" y="102" width="28" height="28" rx="5" fill="#E9E6FA"/>
+    <rect x="68" y="102" width="28" height="28" rx="5" fill="#A99BD9"/>
+    <rect x="102" y="102" width="28" height="28" rx="5" fill="#A99BD9"/>
+    <circle cx="48" cy="48" r="20" fill="none" stroke="#1E2156" stroke-width="7"/>
+    <line x1="62" y1="62" x2="84" y2="84" stroke="#1E2156" stroke-width="8" stroke-linecap="round"/>
+  </g>
+</svg>

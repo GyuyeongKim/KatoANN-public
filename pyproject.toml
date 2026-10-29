@@ -1,0 +1,18 @@
+[build-system]
+requires = ["scikit-build-core>=0.9", "pybind11>=2.12"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "katoann"
+version = "1.0.0"
+description = "IVF vector search with 16-bit codes on CPU matrix engines (Intel AMX)"
+readme = "README.md"
+license = {text = "Apache-2.0"}
+requires-python = ">=3.9"
+dependencies = ["numpy"]
+
+[tool.scikit-build]
+cmake.build-type = "Release"
+build.targets = ["katoann_py"]
+install.components = []
+wheel.packages = []
