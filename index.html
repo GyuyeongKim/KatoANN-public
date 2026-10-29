@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KatoANN RAG demo</title>
+<meta name="description" content="A retrieval-augmented generation (RAG) demo with KatoANN as the retriever: vector search over 10 million PubMed abstracts with recall above 0.99 at thousands of searches per second. KatoANN accelerates approximate nearest neighbor (ANN) search with CPU matrix engines such as Intel AMX.">
+<link rel="stylesheet" href="app.css?v=b0bfccfdf4">
+<script>
+try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 rx=%223%22 fill=%22%230062cc%22/%3E%3Crect x=%223%22 y=%223%22 width=%224%22 height=%224%22 rx=%221%22 fill=%22%23eef5fe%22/%3E%3Crect x=%229%22 y=%223%22 width=%224%22 height=%224%22 rx=%221%22 fill=%22%2399c2f0%22/%3E%3Crect x=%223%22 y=%229%22 width=%224%22 height=%224%22 rx=%221%22 fill=%22%23eef5fe%22/%3E%3Crect x=%229%22 y=%229%22 width=%224%22 height=%224%22 rx=%221%22 fill=%22%2399c2f0%22/%3E%3C/svg%3E">
+</head>
+<body>
+<div class="page">
+
+<header class="masthead">
+  <div class="brand">
+    <span class="wordmark">KatoANN</span>
+    <span class="tag" data-i18n="tag">RAG demo on PubMed</span>
+  </div>
+  <div class="mast-right">
+    <div class="status" id="status"></div>
+    <a class="link ico-link" href="https://github.com/GyuyeongKim/KatoANN-public"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a>
+    <a class="link ico-link" href="https://arxiv.org/abs/2610.27508"><svg class="ico" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"><path d="M3.5 1.5h6l3 3v10h-9z"/><path d="M9.5 1.5v3h3"/><path d="M5.75 8.25h4.5M5.75 11h4.5"/></svg><span data-i18n="paper">Paper</span></a>
+    <button id="lang" class="link" type="button" aria-label="Switch the language">한국어</button>
+    <button id="theme" class="link" type="button" aria-label="Switch the color theme"
+      data-i18n-aria="themeAria">Dark</button>
+  </div>
+</header>
+
+<section class="lede">
+  <h1 data-i18n="h1">High-recall retrieval for RAG at thousands of searches per second</h1>
+  <p data-i18n="lede">In retrieval-augmented generation (RAG), the model can cite only the documents that the vector search returns.
+  KatoANN is an approximate nearest neighbor (ANN) search system that accelerates vector search with CPU matrix engines
+  such as Intel AMX. Here it serves as the retriever over 10 million PubMed abstracts. It returns the nearest abstracts with recall above 0.99 and
+  answers thousands of searches per second, so the searches of many agents do not pile up at the index. Pick a question
+  to replay a recorded run, and see below how each retriever holds up as the load grows.</p>
+</section>
+
+<main class="grid">
+  <section class="ask">
+    <form id="form" autocomplete="off">
+      <label for="input" class="label" data-i18n="question">Question</label>
+      <div class="field">
+        <input id="input" type="text" spellcheck="false" placeholder="Pick an example below" data-i18n-ph="pick">
+        <button type="submit" class="go" id="go" data-i18n="ask">Ask</button>
+      </div>
+      <div class="examples" id="examples"></div>
+    </form>
+
+    <ol class="steps" id="steps" hidden>
+      <li data-step="plan"><span class="name" data-i18n="stepPlan">The model writes searches</span><span class="time"></span>
+        <ul class="queries" id="queries"></ul></li>
+      <li data-step="embed"><span class="name" data-i18n="stepEmbed">BGE-M3 embeds them</span><span class="time"></span></li>
+      <li data-step="search"><span class="name" data-i18n="stepSearch">KatoANN searches 10 million abstracts</span><span class="time"></span>
+        <span class="note" id="search-note"></span></li>
+      <li data-step="answer"><span class="name" data-i18n="stepAnswer">The model answers</span><span class="time"></span></li>
+    </ol>
+
+    <div class="answer" id="answer" aria-live="polite">
+      <p class="placeholder" id="placeholder" data-i18n="placeholder">The answer and the abstracts it cites appear here.</p>
+    </div>
+  </section>
+
+  <aside class="sources" id="sources" hidden>
+    <h2 data-i18n="sources">Abstracts the answer draws on</h2>
+    <ol id="docs"></ol>
+  </aside>
+</main>
+
+<section class="busy" id="busy" hidden>
+  <h2 data-i18n="busyH">When many agents search at once</h2>
+  <p class="busy-lede" data-i18n="busyLede">In a service that runs many agents, the throughput of vector search sets
+  how many agents one index can serve. The searches of every agent go to the same index, and the question above alone
+  needs five. A system keeps up while the searches stay within its capacity, but once they exceed it, the queue grows
+  without bound and every answer waits in it. Each system runs at its lightest setting that reaches the chosen
+  recall.</p>
+  <div class="controls">
+    <div class="control">
+      <span class="label">Recall</span>
+      <div class="seg" id="recalls" role="radiogroup" aria-label="Recall"></div>
+    </div>
+    <div class="control">
+      <span class="label" data-i18n="rateLabel">Searches per second from other agents</span>
+      <div class="seg" id="rates" role="radiogroup" aria-label="Load" data-i18n-aria="loadAria"></div>
+    </div>
+  </div>
+  <h3 class="sub-h" data-i18n="capH">Searches per second each retriever answers on 16 cores, with the offered load marked</h3>
+  <div class="cap" id="cap"></div>
+  <h3 class="sub-h" data-i18n="barsH">Time for the question above at this load</h3>
+  <div class="bars" id="bars"></div>
+  <div class="legend"><span><i style="background:var(--bar-plan)"></i><b data-i18n="segPlan">model writes searches</b></span>
+    <span><i style="background:var(--bar-embed)"></i><b data-i18n="segEmbed">embedding</b></span>
+    <span><i style="background:var(--bar-search)"></i><b data-i18n="segSearch">search</b></span>
+    <span><i style="background:var(--bar-answer)"></i><b data-i18n="segAnswer">model answers</b></span>
+    <span><i class="wait-swatch"></i><b data-i18n="segWait">queue grows without bound</b></span></div>
+  <p class="foot" id="busy-foot"></p>
+</section>
+
+<footer class="footer" id="footer"></footer>
+</div>
+<script src="app.js?v=fa01766b32"></script>
+</body>
+</html>
