@@ -1,0 +1,7 @@
+KatoANN
+Copyright 2026 Gyuyeong Kim (Yonsei University)
+
+src/kmeans.cpp is adapted from PipeANN (https://github.com/thustorage/PipeANN),
+licensed under the Apache License, Version 2.0. That code derives from DiskANN
+(https://github.com/microsoft/DiskANN), Copyright (c) Microsoft Corporation,
+licensed under the MIT License (see LICENSE-DiskANN).
